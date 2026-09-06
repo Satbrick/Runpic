@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Run Card — activity image maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f1115; --panel:#191c22; --panel2:#21252d; --border:#2b303a;
+    --text:#eceef2; --muted:#8b93a0; --accent:#ff4d2e;
+    --radius:12px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);
+    font-family:Inter,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:inherit}
+  .wrap{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
+  header{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:20px}
+  .logo{font-family:"Barlow Condensed",sans-serif;font-weight:700;font-size:30px;
+    letter-spacing:.5px;line-height:1}
+  .logo b{color:var(--accent)}
+  .tag{color:var(--muted);font-size:13px}
+  .grid{display:grid;grid-template-columns:1fr;gap:18px}
+  @media(min-width:880px){.grid{grid-template-columns:minmax(0,1.15fr) 360px}}
+
+  /* Preview */
+  .stage{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:14px;display:flex;flex-direction:column;align-items:center;gap:12px}
+  .canvas-hold{width:100%;display:flex;justify-content:center}
+  canvas{max-width:100%;height:auto;max-height:64vh;border-radius:8px;
+    box-shadow:0 8px 30px rgba(0,0,0,.45);display:block}
+  .stage-actions{display:flex;gap:10px;width:100%}
+
+  /* Controls */
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);
+    padding:16px;margin-bottom:14px}
+  .panel h2{font-size:12px;font-weight:600;letter-spacing:.3px;color:var(--muted);
+    margin:0 0 12px;text-transform:uppercase}
+  label.field{display:block;margin-bottom:12px}
+  label.field span{display:block;font-size:12px;color:var(--muted);margin-bottom:5px}
+  input[type=text],input[type=number]{width:100%;background:var(--panel2);
+    border:1px solid var(--border);border-radius:8px;color:var(--text);
+    padding:9px 10px;font-size:14px;font-family:inherit}
+  input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:transparent}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+
+  .filebtn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;
+    background:var(--panel2);border:1px dashed var(--border);border-radius:8px;
+    padding:14px;font-size:14px;color:var(--text);cursor:pointer;transition:border-color .15s}
+  .filebtn:hover{border-color:var(--accent)}
+  .filebtn small{color:var(--muted);font-weight:400}
+  .fileok{border-style:solid;border-color:#3a5c46;color:#9fe6bb}
+  input[type=file]{display:none}
+
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{background:var(--panel2);border:1px solid var(--border);border-radius:20px;
+    padding:7px 13px;font-size:13px;color:var(--muted);cursor:pointer;user-select:none;
+    transition:all .12s}
+  .chip[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
+
+  .toggles{display:flex;flex-direction:column;gap:2px}
+  .tog{display:flex;align-items:center;justify-content:space-between;padding:8px 2px;
+    font-size:14px;border-bottom:1px solid var(--border)}
+  .tog:last-child{border-bottom:none}
+  .sw{position:relative;width:40px;height:22px;background:var(--panel2);
+    border:1px solid var(--border);border-radius:20px;cursor:pointer;flex:none;transition:background .15s}
+  .sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;
+    border-radius:50%;background:var(--muted);transition:all .15s}
+  .sw[aria-pressed=true]{background:var(--accent);border-color:var(--accent)}
+  .sw[aria-pressed=true]::after{left:20px;background:#fff}
+
+  .swatches{display:flex;gap:9px;flex-wrap:wrap;align-items:center}
+  .sw-col{width:28px;height:28px;border-radius:50%;cursor:pointer;border:2px solid transparent;
+    transition:transform .1s}
+  .sw-col[aria-pressed=true]{border-color:#fff;transform:scale(1.08)}
+
+  input[type=range]{width:100%;accent-color:var(--accent)}
+  .slabel{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-bottom:4px}
+
+  .btn{border:none;border-radius:9px;padding:13px;font-size:15px;font-weight:600;
+    cursor:pointer;font-family:inherit;flex:1;transition:filter .12s}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover{filter:brightness(1.08)}
+  .btn-ghost{background:var(--panel2);color:var(--text);border:1px solid var(--border);flex:none;padding:13px 16px}
+
+  .hint{font-size:12px;color:var(--muted);line-height:1.5;margin-top:2px}
+
+  /* Export modal */
+  .modal{position:fixed;inset:0;background:rgba(8,9,12,.86);display:none;
+    align-items:center;justify-content:center;padding:20px;z-index:50}
+  .modal.open{display:flex}
+  .modal-inner{background:var(--panel);border:1px solid var(--border);border-radius:14px;
+    padding:18px;max-width:420px;width:100%;text-align:center}
+  .modal-inner img{max-width:100%;max-height:60vh;border-radius:8px;margin:10px 0}
+  .modal-inner h3{margin:0 0 4px;font-size:17px}
+  .modal-inner p{color:var(--muted);font-size:13px;margin:0 0 12px}
+  .modal-close{margin-top:6px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">RUN<b>CARD</b></div>
+    <div class="tag">Turn a photo + your Garmin activity into a share-ready image</div>
+  </header>
+
+  <div class="grid">
+    <!-- PREVIEW -->
+    <div class="stage">
+      <div class="canvas-hold"><canvas id="cv" width="1080" height="1350"></canvas></div>
+      <div class="stage-actions">
+        <button class="btn btn-primary" id="exportBtn">Export image</button>
+      </div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="controls">
+      <div class="panel">
+        <h2>1 · Your run</h2>
+        <label class="filebtn" id="gpxLabel" for="gpxInput">
+          <span>Import GPX from Garmin <small>— auto-fills stats + map</small></span>
+        </label>
+        <input type="file" id="gpxInput" accept=".gpx,application/gpx+xml">
+        <p class="hint">In Garmin Connect: open an activity → ⋯ menu → Export to GPX. Or just type the numbers below.</p>
+
+        <label class="field" style="margin-top:12px"><span>Title</span>
+          <input type="text" id="title" value="Morning Run" maxlength="40"></label>
+        <label class="field"><span>Subtitle (date / place)</span>
+          <input type="text" id="subtitle" placeholder="Werribee · 6 Sep" maxlength="40"></label>
+
+        <div class="row2">
+          <label class="field"><span>Distance (km)</span>
+            <input type="number" id="distance" step="0.01" placeholder="10.0"></label>
+          <label class="field"><span>Time (h:mm:ss)</span>
+            <input type="text" id="time" placeholder="52:30"></label>
+        </div>
+        <div class="row2">
+          <label class="field"><span>Elevation (m)</span>
+            <input type="number" id="elev" step="1" placeholder="86"></label>
+          <label class="field"><span>Avg HR (bpm)</span>
+            <input type="number" id="hr" step="1" placeholder="148"></label>
+        </div>
+        <p class="hint" id="paceHint">Pace is calculated from distance and time.</p>
+      </div>
+
+      <div class="panel">
+        <h2>2 · Photo</h2>
+        <label class="filebtn" id="photoLabel" for="photoInput">
+          <span>Upload background photo</span>
+        </label>
+        <input type="file" id="photoInput" accept="image/*">
+        <div class="slabel" style="margin-top:14px"><span>Darken for legibility</span><span id="scrimVal">45%</span></div>
+        <input type="range" id="scrim" min="0" max="80" value="45">
+      </div>
+
+      <div class="panel">
+        <h2>3 · Layout</h2>
+        <div class="chips" id="layoutChips">
+          <span class="chip" data-layout="lowerthird" aria-pressed="true">Lower bar</span>
+          <span class="chip" data-layout="corner">Corner stack</span>
+          <span class="chip" data-layout="bignumber">Big number</span>
+          <span class="chip" data-layout="ticket">Race bib</span>
+          <span class="chip" data-layout="strip">Telemetry</span>
+          <span class="chip" data-layout="editorial">Editorial</span>
+          <span class="chip" data-layout="minimal">Minimal</span>
+        </div>
+        <div style="height:14px"></div>
+        <div class="slabel"><span>Aspect ratio</span></div>
+        <div class="chips" id="aspectChips">
+          <span class="chip" data-aspect="4:5" aria-pressed="true">4:5 post</span>
+          <span class="chip" data-aspect="1:1">1:1 square</span>
+          <span class="chip" data-aspect="9:16">9:16 story</span>
+          <span class="chip" data-aspect="1.91:1">1.91:1 wide</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>4 · Stats shown</h2>
+        <div class="toggles" id="statToggles">
+          <div class="tog">Distance <span class="sw" data-stat="distance" aria-pressed="true"></span></div>
+          <div class="tog">Time <span class="sw" data-stat="time" aria-pressed="true"></span></div>
+          <div class="tog">Pace <span class="sw" data-stat="pace" aria-pressed="true"></span></div>
+          <div class="tog">Elevation <span class="sw" data-stat="elev" aria-pressed="false"></span></div>
+          <div class="tog">Avg HR <span class="sw" data-stat="hr" aria-pressed="false"></span></div>
+          <div class="tog">Route map <span class="sw" data-stat="map" aria-pressed="true"></span></div>
+        </div>
+        <div class="slabel" style="margin-top:14px"><span>Units</span></div>
+        <div class="chips" id="unitChips">
+          <span class="chip" data-unit="km" aria-pressed="true">Metric (km)</span>
+          <span class="chip" data-unit="mi">Imperial (mi)</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>5 · Accent colour</h2>
+        <div class="swatches" id="swatches">
+          <span class="sw-col" style="background:#ff4d2e" data-col="#ff4d2e" aria-pressed="true"></span>
+          <span class="sw-col" style="background:#22d3a7" data-col="#22d3a7"></span>
+          <span class="sw-col" style="background:#3b82f6" data-col="#3b82f6"></span>
+          <span class="sw-col" style="background:#f5c518" data-col="#f5c518"></span>
+          <span class="sw-col" style="background:#a855f7" data-col="#a855f7"></span>
+          <span class="sw-col" style="background:#ffffff" data-col="#ffffff"></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Export modal (mobile-friendly save) -->
+<div class="modal" id="modal">
+  <div class="modal-inner">
+    <h3>Your card is ready</h3>
+    <p id="modalHint">Download started. On mobile, long-press the image below and choose “Save image”.</p>
+    <img id="modalImg" alt="Exported run card">
+    <button class="btn btn-ghost modal-close" id="modalClose" style="width:100%">Close</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const cv = document.getElementById('cv');
+  const ctx = cv.getContext('2d');
+
+  const ASPECTS = {'4:5':[1080,1350],'1:1':[1080,1080],'9:16':[1080,1920],'1.91:1':[1080,566]};
+
+  const state = {
+    photo:null, aspect:'4:5', layout:'lowerthird', accent:'#ff4d2e',
+    scrim:0.45, units:'km',
+    title:'Morning Run', subtitle:'',
+    distanceM:null, durationS:null, elevM:null, hr:null,
+    show:{distance:true,time:true,pace:true,elev:false,hr:false,map:true},
+    route:null
+  };
+
+  /* ---------- helpers ---------- */
+  function haversine(a,b,c,d){
+    const R=6371000, t=x=>x*Math.PI/180;
+    const dLat=t(c-a), dLon=t(d-b);
+    const s=Math.sin(dLat/2)**2+Math.cos(t(a))*Math.cos(t(c))*Math.sin(dLon/2)**2;
+    return 2*R*Math.asin(Math.min(1,Math.sqrt(s)));
+  }
+  function parseTime(str){
+    if(!str) return null;
+    const p=str.split(':').map(s=>parseFloat(s));
+    if(p.some(isNaN)) return null;
+    if(p.length===3) return p[0]*3600+p[1]*60+p[2];
+    if(p.length===2) return p[0]*60+p[1];
+    if(p.length===1) return p[0]*60;
+    return null;
+  }
+  function fmtDur(s){
+    if(s==null) return '—';
+    s=Math.round(s);
+    const h=Math.floor(s/3600), m=Math.floor((s%3600)/60), sec=s%60;
+    const pad=n=>String(n).padStart(2,'0');
+    return h>0 ? `${h}:${pad(m)}:${pad(sec)}` : `${m}:${pad(sec)}`;
+  }
+  function fmtDist(m){
+    if(m==null) return '—';
+    return state.units==='km' ? (m/1000).toFixed(2) : (m/1609.34).toFixed(2);
+  }
+  function distUnit(){return state.units==='km'?'km':'mi';}
+  function fmtPace(){
+    if(state.distanceM==null||state.durationS==null||state.distanceM<=0) return '—';
+    let secPer = state.durationS/(state.distanceM/1000); // per km
+    if(state.units==='mi') secPer*=1.60934;
+    const m=Math.floor(secPer/60), s=Math.round(secPer%60);
+    const mm = s===60 ? m+1 : m, ss = s===60?0:s;
+    return `${mm}:${String(ss).padStart(2,'0')}`;
+  }
+  function paceUnit(){return state.units==='km'?'/km':'/mi';}
+  function fmtElev(m){
+    if(m==null) return '—';
+    return state.units==='km' ? Math.round(m).toString() : Math.round(m*3.28084).toString();
+  }
+  function elevUnit(){return state.units==='km'?'m':'ft';}
+
+  /* ---------- GPX ---------- */
+  function parseGPX(text){
+    const doc=new DOMParser().parseFromString(text,'application/xml');
+    if(doc.querySelector('parsererror')) throw new Error('bad xml');
+    const pts=[...doc.getElementsByTagName('trkpt')];
+    if(!pts.length) throw new Error('no track points');
+    let dist=0, prev=null, elevGain=0, prevEle=null, hrSum=0, hrN=0;
+    let t0=null,t1=null;
+    const coords=[];
+    let minLat=90,maxLat=-90,minLon=180,maxLon=-180;
+    for(const p of pts){
+      const lat=parseFloat(p.getAttribute('lat')), lon=parseFloat(p.getAttribute('lon'));
+      if(isNaN(lat)||isNaN(lon)) continue;
+      coords.push({lat,lon});
+      minLat=Math.min(minLat,lat);maxLat=Math.max(maxLat,lat);
+      minLon=Math.min(minLon,lon);maxLon=Math.max(maxLon,lon);
+      if(prev) dist+=haversine(prev.lat,prev.lon,lat,lon);
+      prev={lat,lon};
+      const eleEl=p.getElementsByTagName('ele')[0];
+      if(eleEl){const e=parseFloat(eleEl.textContent);
+        if(!isNaN(e)){ if(prevEle!=null && e>prevEle) elevGain+=e-prevEle; prevEle=e; }}
+      const timeEl=p.getElementsByTagName('time')[0];
+      if(timeEl){const ts=Date.parse(timeEl.textContent);
+        if(!isNaN(ts)){ if(t0==null)t0=ts; t1=ts; }}
+      // heart rate: any descendant element whose tag ends with 'hr'
+      for(const el of p.getElementsByTagName('*')){
+        if(el.localName && el.localName.toLowerCase()==='hr'){
+          const h=parseInt(el.textContent,10);
+          if(!isNaN(h)){hrSum+=h;hrN++;}
+          break;
+        }
+      }
+    }
+    return {
+      distanceM: dist>0?dist:null,
+      durationS: (t0!=null&&t1!=null&&t1>t0)?(t1-t0)/1000:null,
+      elevM: elevGain>0?elevGain:null,
+      hr: hrN>0?Math.round(hrSum/hrN):null,
+      route: coords.length>1?{pts:coords,minLat,maxLat,minLon,maxLon,midLat:(minLat+maxLat)/2}:null
+    };
+  }
+
+  /* ---------- rendering ---------- */
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath();ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();
+  }
+
+  function drawRoute(bx,by,bw,bh,lw){
+    const r=state.route; if(!r) return;
+    const lonScale=Math.cos(r.midLat*Math.PI/180);
+    const rw=Math.max((r.maxLon-r.minLon)*lonScale,1e-9);
+    const rh=Math.max(r.maxLat-r.minLat,1e-9);
+    const scale=Math.min(bw/rw,bh/rh)*0.92;
+    const offx=bx+(bw-rw*scale)/2, offy=by+(bh-rh*scale)/2;
+    const px=p=>offx+(p.lon-r.minLon)*lonScale*scale;
+    const py=p=>offy+(r.maxLat-p.lat)*scale;
+    // shadow/outline for contrast
+    ctx.lineJoin='round';ctx.lineCap='round';
+    ctx.strokeStyle='rgba(0,0,0,.55)';ctx.lineWidth=lw+6;
+    ctx.beginPath();r.pts.forEach((p,i)=>{const X=px(p),Y=py(p);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y)});ctx.stroke();
+    ctx.strokeStyle=state.accent;ctx.lineWidth=lw;
+    ctx.beginPath();r.pts.forEach((p,i)=>{const X=px(p),Y=py(p);i?ctx.lineTo(X,Y):ctx.moveTo(X,Y)});ctx.stroke();
+    // start (white) & end (accent) dots
+    const s=r.pts[0], e=r.pts[r.pts.length-1];
+    ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(px(s),py(s),lw*1.4,0,7);ctx.fill();
+    ctx.fillStyle=state.accent;ctx.beginPath();ctx.arc(px(e),py(e),lw*1.4,0,7);ctx.fill();
+  }
+
+  function activeStats(){
+    const out=[];
+    if(state.show.distance) out.push(['Distance',fmtDist(state.distanceM),distUnit()]);
+    if(state.show.time)     out.push(['Time',fmtDur(state.durationS),'']);
+    if(state.show.pace)     out.push(['Pace',fmtPace(),paceUnit()]);
+    if(state.show.elev)     out.push(['Elev gain',fmtElev(state.elevM),elevUnit()]);
+    if(state.show.hr)       out.push(['Avg HR',state.hr!=null?String(state.hr):'—','bpm']);
+    return out;
+  }
+
+  // draws a horizontal row of stats starting at x,y (baseline top). returns total width
+  function drawStatRow(stats,x,y,valSize,measureOnly){
+    const labSize=Math.round(valSize*0.30);
+    const gap=valSize*0.9;
+    let cx=x, total=0;
+    for(const [label,val,unit] of stats){
+      ctx.font=`600 ${valSize}px "Barlow Condensed"`;
+      const valW=ctx.measureText(val).width;
+      ctx.font=`600 ${labSize}px "Barlow Condensed"`;
+      const unitStr=unit?(' '+unit):'';
+      // width of this block = max(val+unit, label)
+      ctx.font=`600 ${valSize}px "Barlow Condensed"`;
+      const vW=ctx.measureText(val).width;
+      ctx.font=`500 ${Math.round(valSize*0.42)}px "Barlow Condensed"`;
+      const uW=unit?ctx.measureText(unitStr).width:0;
+      ctx.font=`600 ${labSize}px Inter`;
+      const lW=ctx.measureText(label.toUpperCase()).width;
+      const blockW=Math.max(vW+uW,lW);
+      if(!measureOnly){
+        // label
+        ctx.fillStyle='rgba(255,255,255,.72)';
+        ctx.font=`600 ${labSize}px Inter`;
+        ctx.textBaseline='top';
+        ctx.save();ctx.translate(cx,y);
+        ctx.fillText(spaceOut(label.toUpperCase()),0,0);ctx.restore();
+        // value
+        ctx.fillStyle='#fff';
+        ctx.font=`600 ${valSize}px "Barlow Condensed"`;
+        ctx.textBaseline='alphabetic';
+        const vy=y+labSize+valSize*0.92;
+        ctx.fillText(val,cx,vy);
+        if(unit){
+          ctx.fillStyle='rgba(255,255,255,.65)';
+          ctx.font=`500 ${Math.round(valSize*0.42)}px "Barlow Condensed"`;
+          ctx.fillText(unitStr,cx+vW,vy);
+        }
+      }
+      cx+=blockW+gap; total+=blockW+gap;
+    }
+    return total-gap;
+  }
+  function spaceOut(s){return s.split('').join('\u200a\u200a');} // light letter-spacing for labels
+
+  function render(){
+    const [W,H]=ASPECTS[state.aspect];
+    if(cv.width!==W||cv.height!==H){cv.width=W;cv.height=H;}
+    ctx.clearRect(0,0,W,H);
+
+    // background
+    if(state.photo){
+      const img=state.photo, ir=img.width/img.height, cr=W/H;
+      let dw,dh;
+      if(ir>cr){dh=H;dw=H*ir;}else{dw=W;dh=W/ir;}
+      ctx.drawImage(img,(W-dw)/2,(H-dh)/2,dw,dh);
+    }else{
+      const g=ctx.createLinearGradient(0,0,W,H);
+      g.addColorStop(0,'#20242c');g.addColorStop(1,'#12141a');
+      ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+      ctx.fillStyle='rgba(255,255,255,.35)';
+      ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.font=`500 ${Math.round(W*0.035)}px Inter`;
+      ctx.fillText('Upload a photo to begin',W/2,H/2);
+      ctx.textAlign='left';
+    }
+
+    // scrim
+    const bottomAnchored = state.layout==='lowerthird' || state.layout==='corner';
+    if(state.scrim>0){
+      if(bottomAnchored){
+        const g=ctx.createLinearGradient(0,H*0.35,0,H);
+        g.addColorStop(0,'rgba(0,0,0,0)');
+        g.addColorStop(1,`rgba(0,0,0,${Math.min(1,state.scrim+0.25)})`);
+        ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+      }else if(state.layout!=='strip'){ // strip draws its own side gradient
+        ctx.fillStyle=`rgba(0,0,0,${state.scrim*0.7})`;ctx.fillRect(0,0,W,H);
+      }
+    }
+
+    const pad=Math.round(W*0.06);
+    const stats=activeStats();
+    const LW=Math.max(3,W*0.006); // route line width
+
+    const layouts={
+      // Strava-style bottom gradient bar
+      lowerthird(){
+        ctx.fillStyle=state.accent;
+        ctx.fillRect(pad,H-Math.round(H*0.30),Math.round(W*0.09),Math.round(W*0.013));
+        ctx.fillStyle='#fff';ctx.textBaseline='alphabetic';
+        ctx.font=`700 ${Math.round(W*0.075)}px "Barlow Condensed"`;
+        ctx.fillText(state.title||'',pad,H-Math.round(H*0.235));
+        if(state.subtitle){
+          ctx.fillStyle='rgba(255,255,255,.8)';
+          ctx.font=`500 ${Math.round(W*0.032)}px Inter`;
+          ctx.fillText(state.subtitle,pad,H-Math.round(H*0.19));
+        }
+        drawStatRow(stats,pad,H-Math.round(H*0.135),Math.round(W*0.075),false);
+        if(state.show.map && state.route){
+          const ms=Math.round(W*0.26);
+          drawRoute(W-pad-ms,H-Math.round(H*0.30),ms,ms,LW);
+        }
+      },
+
+      // Stacked stats bottom-left
+      corner(){
+        let y=H-pad-Math.round(H*0.02);
+        const vs=Math.round(W*0.11), labSize=Math.round(vs*0.28);
+        for(let i=stats.length-1;i>=0;i--){
+          const [label,val,unit]=stats[i];
+          ctx.fillStyle='#fff';ctx.textBaseline='alphabetic';
+          ctx.font=`600 ${vs}px "Barlow Condensed"`;
+          ctx.fillText(val,pad,y);
+          const vW=ctx.measureText(val).width;
+          if(unit){ctx.fillStyle='rgba(255,255,255,.6)';
+            ctx.font=`500 ${Math.round(vs*0.4)}px "Barlow Condensed"`;
+            ctx.fillText(' '+unit,pad+vW,y);}
+          ctx.fillStyle=state.accent;
+          ctx.font=`600 ${labSize}px Inter`;
+          ctx.fillText(spaceOut(label.toUpperCase()),pad,y-vs*0.92);
+          y-=vs*1.25;
+        }
+        ctx.fillStyle='#fff';ctx.textBaseline='top';
+        ctx.font=`700 ${Math.round(W*0.07)}px "Barlow Condensed"`;
+        ctx.fillText(state.title||'',pad,pad);
+        if(state.subtitle){ctx.fillStyle='rgba(255,255,255,.8)';
+          ctx.font=`500 ${Math.round(W*0.03)}px Inter`;
+          ctx.fillText(state.subtitle,pad,pad+Math.round(W*0.075));}
+        if(state.show.map && state.route){
+          const ms=Math.round(W*0.30);
+          drawRoute(W-pad-ms,pad,ms,ms,LW);
+        }
+      },
+
+      // Centered, quiet
+      minimal(){
+        ctx.textAlign='center';
+        ctx.fillStyle='#fff';ctx.textBaseline='alphabetic';
+        ctx.font=`700 ${Math.round(W*0.085)}px "Barlow Condensed"`;
+        ctx.fillText(state.title||'',W/2,H*0.5);
+        ctx.fillStyle=state.accent;
+        ctx.fillRect(W/2-Math.round(W*0.05),H*0.53,Math.round(W*0.10),Math.round(W*0.01));
+        if(state.subtitle){ctx.fillStyle='rgba(255,255,255,.8)';
+          ctx.font=`500 ${Math.round(W*0.032)}px Inter`;
+          ctx.fillText(state.subtitle,W/2,H*0.44);}
+        ctx.textAlign='left';
+        const vs=Math.round(W*0.06);
+        const tot=drawStatRow(stats,0,0,vs,true);
+        drawStatRow(stats,(W-tot)/2,H-Math.round(H*0.12),vs,false);
+        if(state.show.map && state.route){
+          const ms=Math.round(W*0.22);
+          drawRoute(W/2-ms/2,H*0.6,ms,ms,LW);
+        }
+      },
+
+      // Milestone hero — one giant stat
+      bignumber(){
+        const hero=stats.find(s=>s[0]==='Distance')||stats[0];
+        const rest=stats.filter(s=>s!==hero);
+        ctx.fillStyle='#fff';ctx.textBaseline='top';
+        ctx.font=`700 ${Math.round(W*0.055)}px "Barlow Condensed"`;
+        ctx.fillText(state.title||'',pad,pad);
+        if(state.subtitle){ctx.fillStyle='rgba(255,255,255,.8)';
+          ctx.font=`500 ${Math.round(W*0.028)}px Inter`;
+          ctx.fillText(state.subtitle,pad,pad+Math.round(W*0.058));}
+        if(hero){
+          const gv=Math.round(Math.min(W*0.28,H*0.22));
+          const yLab=H*0.55;
+          ctx.textBaseline='alphabetic';
+          ctx.fillStyle=state.accent;
+          ctx.font=`600 ${Math.round(W*0.032)}px Inter`;
+          ctx.fillText(spaceOut(hero[0].toUpperCase()),pad,yLab);
+          ctx.fillStyle='#fff';
+          ctx.font=`700 ${gv}px "Barlow Condensed"`;
+          const yVal=yLab+gv*0.82;
+          ctx.fillText(hero[1],pad,yVal);
+          const vW=ctx.measureText(hero[1]).width;
+          if(hero[2]){ctx.fillStyle='rgba(255,255,255,.7)';
+            ctx.font=`500 ${Math.round(gv*0.28)}px "Barlow Condensed"`;
+            ctx.fillText(' '+hero[2],pad+vW,yVal);}
+        }
+        if(rest.length) drawStatRow(rest,pad,H-Math.round(H*0.10),Math.round(W*0.05),false);
+        if(state.show.map && state.route){
+          const ms=Math.round(W*0.28);
+          drawRoute(W-pad-ms,pad,ms,ms,LW);
+        }
+      },
+
+      // Magazine frame — hairline border, centered masthead
+      editorial(){
+        const m=Math.round(W*0.045);
+        ctx.strokeStyle='rgba(255,255,255,.85)';
+        ctx.lineWidth=Math.max(2,W*0.004);
+        ctx.strokeRect(m,m,W-2*m,H-2*m);
+        ctx.textAlign='center';ctx.textBaseline='top';
+        ctx.fillStyle='#fff';
+        ctx.font=`700 ${Math.round(W*0.075)}px "Barlow Condensed"`;
+        ctx.fillText((state.title||'').toUpperCase(),W/2,m+Math.round(W*0.045));
+        if(state.subtitle){ctx.fillStyle=state.accent;
+          ctx.font=`600 ${Math.round(W*0.026)}px Inter`;
+          ctx.fillText(spaceOut(state.subtitle.toUpperCase()),W/2,m+Math.round(W*0.135));}
+        ctx.textAlign='left';
+        const vs=Math.round(W*0.058);
+        const tot=drawStatRow(stats,0,0,vs,true);
+        drawStatRow(stats,(W-tot)/2,H-m-Math.round(W*0.13),vs,false);
+        if(state.show.map && state.route){
+          const ms=Math.round(W*0.34);
+          drawRoute(W/2-ms/2,H*0.40,ms,ms,LW);
+        }
+      },
+
+      // Race bib / boarding-pass panel
+      ticket(){
+        const panelH=Math.round(H*0.30);
+        const py=H-panelH-pad, px=pad, pw=W-2*pad;
+        const r=Math.round(W*0.03);
+        ctx.fillStyle='rgba(10,12,16,.82)';
+        roundRect(px,py,pw,panelH,r);ctx.fill();
+        const hh=Math.round(panelH*0.30);
+        ctx.save();roundRect(px,py,pw,panelH,r);ctx.clip();
+        ctx.fillStyle=state.accent;ctx.fillRect(px,py,pw,hh);ctx.restore();
+        ctx.fillStyle='#fff';ctx.textBaseline='middle';
+        ctx.font=`700 ${Math.round(hh*0.5)}px "Barlow Condensed"`;
+        ctx.fillText((state.title||'').toUpperCase(),px+Math.round(W*0.04),py+hh*0.52);
+        if(state.subtitle){ctx.textAlign='right';
+          ctx.font=`500 ${Math.round(hh*0.3)}px Inter`;
+          ctx.fillText(state.subtitle,px+pw-Math.round(W*0.04),py+hh*0.52);ctx.textAlign='left';}
+        const cellY=py+hh, cellH=panelH-hh;
+        const shown=stats.slice(0,4), n=Math.max(shown.length,1), cw=pw/n;
+        shown.forEach((s,i)=>{
+          const cx=px+cw*i+cw/2;
+          if(i>0){ctx.strokeStyle='rgba(255,255,255,.14)';ctx.lineWidth=1;
+            ctx.beginPath();ctx.moveTo(px+cw*i,cellY+cellH*0.18);
+            ctx.lineTo(px+cw*i,cellY+cellH*0.82);ctx.stroke();}
+          ctx.textAlign='center';ctx.textBaseline='alphabetic';
+          ctx.fillStyle=state.accent;
+          ctx.font=`600 ${Math.round(cellH*0.15)}px Inter`;
+          ctx.fillText(spaceOut(s[0].toUpperCase()),cx,cellY+cellH*0.38);
+          ctx.fillStyle='#fff';
+          ctx.font=`600 ${Math.round(cellH*0.42)}px "Barlow Condensed"`;
+          ctx.fillText(s[1]+(s[2]?(' '+s[2]):''),cx,cellY+cellH*0.82);
+        });
+        ctx.textAlign='left';
+        if(state.show.map && state.route){
+          const ms=Math.round(W*0.24);
+          drawRoute(W-pad-ms,py-ms-Math.round(H*0.025),ms,ms,LW);
+        }
+      },
+
+      // Telemetry — left column of stacked stats over a side gradient
+      strip(){
+        const sw=Math.round(W*0.42);
+        const g=ctx.createLinearGradient(0,0,sw,0);
+        g.addColorStop(0,`rgba(6,8,12,${Math.min(0.92,0.55+state.scrim*0.5)})`);
+        g.addColorStop(1,'rgba(6,8,12,0)');
+        ctx.fillStyle=g;ctx.fillRect(0,0,sw,H);
+        ctx.fillStyle=state.accent;
+        ctx.fillRect(pad,pad,Math.round(W*0.07),Math.round(W*0.012));
+        ctx.fillStyle='#fff';ctx.textBaseline='top';
+        ctx.font=`700 ${Math.round(W*0.06)}px "Barlow Condensed"`;
+        ctx.fillText(state.title||'',pad,pad+Math.round(W*0.03));
+        if(state.subtitle){ctx.fillStyle='rgba(255,255,255,.8)';
+          ctx.font=`500 ${Math.round(W*0.028)}px Inter`;
+          ctx.fillText(state.subtitle,pad,pad+Math.round(W*0.10));}
+        let y=H*0.38;
+        const vs=Math.round(W*0.075);
+        ctx.textBaseline='alphabetic';
+        for(const [label,val,unit] of stats){
+          ctx.fillStyle=state.accent;
+          ctx.font=`600 ${Math.round(vs*0.26)}px Inter`;
+          ctx.fillText(spaceOut(label.toUpperCase()),pad,y);
+          ctx.fillStyle='#fff';
+          ctx.font=`600 ${vs}px "Barlow Condensed"`;
+          ctx.fillText(val,pad,y+vs*0.95);
+          const vW=ctx.measureText(val).width;
+          if(unit){ctx.fillStyle='rgba(255,255,255,.6)';
+            ctx.font=`500 ${Math.round(vs*0.4)}px "Barlow Condensed"`;
+            ctx.fillText(' '+unit,pad+vW,y+vs*0.95);}
+          y+=vs*1.4;
+        }
+        if(state.show.map && state.route){
+          const ms=Math.round(W*0.30);
+          drawRoute(W-pad-ms,H-pad-ms,ms,ms,LW);
+        }
+      }
+    };
+    (layouts[state.layout]||layouts.lowerthird)();
+
+    // subtle watermark
+    ctx.fillStyle='rgba(255,255,255,.35)';
+    ctx.font=`500 ${Math.round(W*0.02)}px Inter`;
+    ctx.textAlign='right';ctx.textBaseline='bottom';
+    ctx.fillText('made with RunCard',W-Math.round(W*0.03),H-Math.round(W*0.025));
+    ctx.textAlign='left';
+  }
+
+  /* ---------- wiring ---------- */
+  const $=id=>document.getElementById(id);
+
+  $('gpxInput').addEventListener('change',async e=>{
+    const f=e.target.files[0]; if(!f) return;
+    try{
+      const g=parseGPX(await f.text());
+      if(g.distanceM!=null){state.distanceM=g.distanceM;
+        $('distance').value=(g.distanceM/1000).toFixed(2);}
+      if(g.durationS!=null){state.durationS=g.durationS; $('time').value=fmtDur(g.durationS);}
+      if(g.elevM!=null){state.elevM=g.elevM; $('elev').value=Math.round(g.elevM);}
+      if(g.hr!=null){state.hr=g.hr; $('hr').value=g.hr;
+        setSwitch('hr',true); state.show.hr=true;}
+      if(g.route){state.route=g.route; setSwitch('map',true); state.show.map=true;}
+      const lbl=$('gpxLabel');lbl.classList.add('fileok');
+      lbl.querySelector('span').innerHTML='GPX loaded ✓ <small>— stats & map filled in</small>';
+      render();
+    }catch(err){
+      const lbl=$('gpxLabel');
+      lbl.querySelector('span').innerHTML='Couldn’t read that file <small>— try re-exporting the GPX</small>';
+    }
+  });
+
+  $('photoInput').addEventListener('change',e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const img=new Image();
+    img.onload=()=>{state.photo=img;
+      const lbl=$('photoLabel');lbl.classList.add('fileok');
+      lbl.querySelector('span').textContent='Photo added ✓ — tap to change';
+      render();};
+    img.src=URL.createObjectURL(f);
+  });
+
+  $('title').addEventListener('input',e=>{state.title=e.target.value;render();});
+  $('subtitle').addEventListener('input',e=>{state.subtitle=e.target.value;render();});
+  $('distance').addEventListener('input',e=>{
+    const v=parseFloat(e.target.value);state.distanceM=isNaN(v)?null:v*1000;render();});
+  $('time').addEventListener('input',e=>{state.durationS=parseTime(e.target.value.trim());render();});
+  $('elev').addEventListener('input',e=>{
+    const v=parseFloat(e.target.value);state.elevM=isNaN(v)?null:v;render();});
+  $('hr').addEventListener('input',e=>{
+    const v=parseInt(e.target.value,10);state.hr=isNaN(v)?null:v;render();});
+
+  $('scrim').addEventListener('input',e=>{
+    state.scrim=e.target.value/100;$('scrimVal').textContent=e.target.value+'%';render();});
+
+  function pressGroup(containerId,attr,cb){
+    $(containerId).addEventListener('click',e=>{
+      const el=e.target.closest('[data-'+attr+']'); if(!el) return;
+      [...e.currentTarget.querySelectorAll('[data-'+attr+']')]
+        .forEach(x=>x.setAttribute('aria-pressed', x===el));
+      cb(el.getAttribute('data-'+attr));render();
+    });
+  }
+  pressGroup('layoutChips','layout',v=>state.layout=v);
+  pressGroup('aspectChips','aspect',v=>state.aspect=v);
+  pressGroup('unitChips','unit',v=>state.units=v);
+  $('swatches').addEventListener('click',e=>{
+    const el=e.target.closest('[data-col]'); if(!el) return;
+    [...e.currentTarget.children].forEach(x=>x.setAttribute('aria-pressed',x===el));
+    state.accent=el.getAttribute('data-col');
+    document.documentElement.style.setProperty('--accent',state.accent);
+    render();
+  });
+
+  function setSwitch(stat,on){
+    const el=document.querySelector(`.sw[data-stat="${stat}"]`);
+    if(el) el.setAttribute('aria-pressed',on);
+  }
+  $('statToggles').addEventListener('click',e=>{
+    const el=e.target.closest('.sw'); if(!el) return;
+    const stat=el.getAttribute('data-stat');
+    const on=el.getAttribute('aria-pressed')!=='true';
+    el.setAttribute('aria-pressed',on);
+    state.show[stat]=on;render();
+  });
+
+  // export
+  $('exportBtn').addEventListener('click',()=>{
+    render();
+    cv.toBlob(blob=>{
+      const url=URL.createObjectURL(blob);
+      const name=(state.title||'run-card').replace(/[^\w-]+/g,'_').toLowerCase()+'.png';
+      const a=document.createElement('a');a.href=url;a.download=name;
+      document.body.appendChild(a);a.click();a.remove();
+      $('modalImg').src=url;$('modal').classList.add('open');
+    },'image/png');
+  });
+  $('modalClose').addEventListener('click',()=>$('modal').classList.remove('open'));
+  $('modal').addEventListener('click',e=>{if(e.target===$('modal'))$('modal').classList.remove('open');});
+
+  // fonts then first paint
+  if(document.fonts && document.fonts.ready){
+    document.fonts.load('600 90px "Barlow Condensed"');
+    document.fonts.load('600 20px Inter');
+    document.fonts.ready.then(render);
+  }
+  render();
+})();
+</script>
+</body>
+</html>
